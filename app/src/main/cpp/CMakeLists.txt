@@ -4,6 +4,9 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 project("mygame")
+find_package(Vulkan)
+add_subdirectory(spirv_reflect)
+add_subdirectory(GameEngine)
 
 # Creates your game shared library. The name must be the same as the
 # one used for loading in your Kotlin/Java or AndroidManifest.txt files.
@@ -25,6 +28,8 @@ target_link_libraries(mygame
 
         # EGL and other dependent libraries required for drawing
         # and interacting with Android system
+        GameEngine
+        vulkan
         EGL
         GLESv3
         jnigraphics

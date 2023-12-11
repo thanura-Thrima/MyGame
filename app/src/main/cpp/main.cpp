@@ -70,6 +70,7 @@ void android_main(struct android_app *pApp) {
     // Note that for key inputs, this example uses the default default_key_filter()
     // implemented in android_native_app_glue.c.
     android_app_set_motion_event_filter(pApp, motion_event_filter_func);
+    android_app_set_key_event_filter(pApp,NULL);
 
     // This sets up a typical game/event loop. It will run until the app is destroyed.
     int events;
@@ -97,4 +98,9 @@ void android_main(struct android_app *pApp) {
         }
     } while (!pApp->destroyRequested);
 }
+}
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_example_mygame_MainActivity_stringFromJNI(JNIEnv *env, jobject thiz) {
+    return (*env).NewStringUTF( "Hello from JNI ");
 }
