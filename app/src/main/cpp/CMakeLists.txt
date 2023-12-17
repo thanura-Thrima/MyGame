@@ -13,7 +13,7 @@ add_subdirectory(GameEngine)
 add_library(mygame SHARED
         main.cpp
         AndroidOut.cpp
-        Renderer.cpp
+        #VulkanRenderer.cpp
         Shader.cpp
         TextureAsset.cpp
         Utility.cpp)
@@ -21,6 +21,7 @@ add_library(mygame SHARED
 # Searches for a package provided by the game activity dependency
 find_package(game-activity REQUIRED CONFIG)
 
+target_include_directories(mygame PUBLIC ${CMAKE_SOURCE_DIR}/GameEngine/)
 # Configure libraries CMake uses to link your target library.
 target_link_libraries(mygame
         # The game activity

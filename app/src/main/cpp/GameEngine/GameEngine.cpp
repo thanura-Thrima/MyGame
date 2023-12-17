@@ -1,10 +1,8 @@
-//
-// Created by varjo on 11/25/2023.
-//
 #include <android/log.h>
 
 #include "GameEngine.h"
 #include "Utils/Definitions.h"
+#include "GFX/GfxDevice.h"
 
 std::shared_ptr<GameEngine> GameEngine::s_GameEngine = nullptr;
 GameEngine::~GameEngine() {
@@ -14,7 +12,7 @@ GameEngine::~GameEngine() {
 GameEngine::GameEngine() {
     LOGD(__func__,"Constructor");
 }
-std::shared_ptr<GameEngine> GameEngine::getCameEngine() {
+std::shared_ptr<GameEngine> GameEngine::getGameEngine() {
     if (s_GameEngine == nullptr)
     {
         s_GameEngine = std::shared_ptr<GameEngine>(new GameEngine());
@@ -33,8 +31,10 @@ void GameEngine::reset(ANativeWindow *newWindow, AAssetManager *newManager)
     }
 }
 
-void GameEngine::init()
+void GameEngine::init(ANativeWindow *newWindow, AAssetManager *newManager)
 {
+    m_MainWindow.reset(newWindow);
+    p_AssetManager = newManager;
 
 }
 

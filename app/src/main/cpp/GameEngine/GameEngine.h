@@ -1,6 +1,4 @@
-//
-// Created by varjo on 11/25/2023.
-//
+#pragma once
 
 #ifndef MYGAME_GAMEENGINE_H
 #define MYGAME_GAMEENGINE_H
@@ -8,7 +6,6 @@
 #include <android/asset_manager.h>
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
-#include "GFX/GfxDevice.h"
 
 struct ANativeWindowDeleter {
     void operator()(ANativeWindow *window)
@@ -16,12 +13,13 @@ struct ANativeWindowDeleter {
         ANativeWindow_release(window);
     }
 };
+class GfxDevice;
 class GameEngine {
 public:
-    static std::shared_ptr<GameEngine> getCameEngine();
+    static std::shared_ptr<GameEngine> getGameEngine();
     virtual ~GameEngine();
     void reset(ANativeWindow *newWindow, AAssetManager *newManager);
-    void init();
+    void init(ANativeWindow *newWindow, AAssetManager *newManager);
     void cleanup();
 private:
     GameEngine();

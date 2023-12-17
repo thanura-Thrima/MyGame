@@ -1,9 +1,4 @@
-//
-// Created by varjo on 11/25/2023.
-//
-
-#ifndef MYGAME_DEFINITIONS_H
-#define MYGAME_DEFINITIONS_H
+#pragma once
 #include "../../../../../../../../AppData/Local/Android/Sdk/ndk/25.1.8937393/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include/android/log.h"
 
 #define LOGI(TAG,...) __android_log_print(ANDROID_LOG_INFO,TAG,__VA_ARGS__)
@@ -17,4 +12,3 @@
     className(className&&) = delete;                    \
     className& operator=(className&&) = delete;
 
-#endif //MYGAME_DEFINITIONS_H

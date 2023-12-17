@@ -8,7 +8,7 @@ class TextureSampler{
 public:
     NONCOPYABLE(TextureSampler);
     TextureSampler(const ThreadSafeGfxDevice& threadSafeDevice, GfxSamplerType type);
-    ~TextureSampler();
+    ~TextureSampler(){};
 
     GfxSamplerType getType() const ;
 
