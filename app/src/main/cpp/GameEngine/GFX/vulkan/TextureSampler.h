@@ -1,7 +1,7 @@
 #pragma once
 #include <vulkan/vulkan.h>
 #include "GfxTypes.h"
-#include "../Utils/Definitions.h"
+#include "../../Utils/Definitions.h"
 #include "GfxDevice.h"
 
 class TextureSampler{
@@ -18,4 +18,5 @@ private:
     VkSampler m_sampler;
     GfxSamplerType m_type;
     ThreadSafeGfxDevice m_device;
+    static std::string m_TAG;
 };

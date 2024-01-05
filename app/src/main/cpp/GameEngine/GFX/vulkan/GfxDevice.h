@@ -7,17 +7,17 @@
 #include <vector>
 #include <mutex>
 
-#include <glm/glm.hpp>
+#include "glm/glm.hpp"
 #include <vulkan/vulkan.h>
-#include <android/native_window_jni.h>
 
+#include "../IGfxDevice.h"
 #include "GfxTypes.h"
-#include "../Utils/ThreadSafeHandle.h"
+#include "../../Utils/ThreadSafeHandle.h"
 #include "GfxTexture.h"
 #include "GfxBuffer.h"
 
-#include "../EntityComponent/Mesh.h"
-class TextureSampler;
+#include "../../EntityComponent/Mesh.h"
+//class TextureSampler;
 
 struct DeviceConfig {
     VkInstance instance{VK_NULL_HANDLE};
@@ -51,25 +51,42 @@ struct SwapchainImage {
     VkImageView imageView;
 };
 
-class GfxDevice
+struct SwapchainSupportInfo{
+    VkSurfaceCapabilitiesKHR capabilities;
+    uint32_t formatCount;
+    VkSurfaceFormatKHR* formats;
+    uint32_t presentModeCount;
+    VkPresentModeKHR* presentModes;
+};
+
+class GfxDevice : public IGfxDevice
 {
 
 public:
+    GfxDevice()= delete;
     GfxDevice(const DeviceConfig& config);
-    ~GfxDevice();
+    ~GfxDevice(){}
     VkPhysicalDevice getPhysicalDevice(VkInstance instance);
 
     const VkDevice getDevice()const { return m_DeviceStruct.device; }
     bool threadAssigned() { return true; }
 
-    bool isInitialized() {return false; }
+    bool isInitialized() override {return false; }
 
-    void createSurface(ANativeWindow* window);
-    void createSwapChain();
-    void reCreateSwapchain();
+    void createSurface(ANativeWindow* window) override;
+
+    void reCreateSwapchain() override;
+
+    void init() override;
+
+    void deInit() override;
+
+
 private:
     void createSamplers();
+    void createSwapChain();
     void createRenderPass();
+    void createFrameBuffers();
     void createDescriptorSetLayout();
     void createPushConstantRange();
     void createGraphicsPipeline();
@@ -104,7 +121,7 @@ private:
 
     VkPhysicalDeviceMemoryProperties m_MemoryProps{};
     VkSurfaceKHR m_Surface{VK_NULL_HANDLE};
-    std::unordered_map<GfxSamplerType, std::unique_ptr<TextureSampler>> m_samplers;
+    //std::unordered_map<GfxSamplerType, std::unique_ptr<TextureSampler>> m_samplers;
     VkSurfaceTransformFlagBitsKHR m_PretransformFlag;
     VkSwapchainKHR m_SwapChain{VK_NULL_HANDLE};
     VkRenderPass m_RenderPass {VK_NULL_HANDLE};
@@ -148,5 +165,7 @@ private:
 
     // Scene Objects
     std::vector<Mesh> meshList;
+
+    static std::string m_TAG;
 };
 using ThreadSafeGfxDevice = ThreadSafeHandle<GfxDevice>;

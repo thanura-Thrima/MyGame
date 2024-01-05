@@ -61,8 +61,14 @@ void android_main(struct android_app *pApp) {
     // Can be removed, useful to ensure your code is running
     aout << "Welcome to android_main" << std::endl;
 
+    pApp->userData = GameEngine::getGameEngine().get();
+
+    auto *pGameEngine = reinterpret_cast<GameEngine *>(pApp->userData);
+
+    pGameEngine->run(pApp);
+
     // Register an event handler for Android events
-    pApp->onAppCmd = handle_cmd;
+    /*pApp->onAppCmd = handle_cmd;
 
     // Set input event filters (set it to NULL if the app wants to process all inputs).
     // Note that for key inputs, this example uses the default default_key_filter()
@@ -95,6 +101,8 @@ void android_main(struct android_app *pApp) {
             //aout << "Inside the came loop" << std::endl;
         }
     } while (!pApp->destroyRequested);
+
+     */
 }
 }
 extern "C"

@@ -2,6 +2,8 @@
 //#include "GfxTypes.h"
 #include "GfxUtils.h"
 
+std::string TextureSampler::m_TAG = "TextureSampler";
+
 VkSamplerCreateInfo getLinearConfig()
 {
     VkSamplerCreateInfo samplerCreateInfo = {};
@@ -45,14 +47,14 @@ TextureSampler::TextureSampler(const ThreadSafeGfxDevice& threadSafeDevice, GfxS
             samplerCreateInfo.addressModeU = samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
         } break;
         case GfxSamplerType::MIN_SAMPLER: {
-            LOGE(__FUNCTION__ ,"Not implemented.");
+            LOGE(m_TAG ,"Not implemented.");
         } break;
         case GfxSamplerType::ANISO_SAMPLER: {
             samplerCreateInfo.anisotropyEnable = VK_TRUE;
             samplerCreateInfo.maxAnisotropy = 16;
         } break;
         default: {
-            LOGE(__FUNCTION__,"Unkown sampler type.");
+            LOGE(m_TAG,"Unkown sampler type.");
 
             break;
         }

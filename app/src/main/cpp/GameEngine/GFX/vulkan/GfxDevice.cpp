@@ -5,14 +5,15 @@
 #include "GfxUtils.h"
 #include "GfxDevice.h"
 #include "TextureSampler.h"
-
+#define MAX_OBJECTS 2
+std::string  GfxDevice::m_TAG = "GfxDevice";
 GfxDevice::GfxDevice(const DeviceConfig &config) {
 
     uint32_t queueIndex{};
     if(config.device != VK_NULL_HANDLE )
     {
-        LOGD(__PRETTY_FUNCTION__,"vulkan device already available");
-        LOGD(__PRETTY_FUNCTION__,"Using external device");
+        LOGD(m_TAG,"vulkan device already available");
+        LOGD(m_TAG,"Using external device");
             // replacing with new consolidated struct
         m_DeviceStruct.instance = config.instance;
         m_DeviceStruct.physicalDevice = config.physicalDevice;
@@ -23,7 +24,7 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
         m_BufferQueueStruct.transferQueueFamilyIndex = config.transferQueueFamilyIndex;
 
     }else {
-        LOGD(__PRETTY_FUNCTION__,"vulkan device creation");
+        LOGD(m_TAG,"vulkan device creation");
         VkApplicationInfo appInfo{};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         appInfo.pApplicationName = config.applicationName.c_str();
@@ -35,7 +36,6 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
         VkInstanceCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
         createInfo.pApplicationInfo = &appInfo;
-
 
         {
             std::vector<const char*> enabledExtensions;
@@ -73,7 +73,7 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
 
             m_DeviceStruct.physicalDevice = getPhysicalDevice(m_DeviceStruct.instance);
             if (m_DeviceStruct.physicalDevice == VK_NULL_HANDLE) {
-                LOGE(__FUNCTION__ ,"No suitable physical device found.");
+                LOGE(m_TAG ,"No suitable physical device found.");
                 throw std::runtime_error("no suitable physical device");
             }
         }
@@ -92,17 +92,17 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
                     m_BufferQueueStruct.computeQueueFamilyIndex = i;
                     computeQueueFound = true;
                 }
-                if (!transferQueueFound && queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+                /*if (!transferQueueFound && queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
                     m_BufferQueueStruct.transferQueueFamilyIndex = i;
                     transferQueueFound = true;
-                }
+                }*/
                 if( !graphicsQueueFound && queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                     m_BufferQueueStruct.graphicsQueueFamilyIndex = i;
                     graphicsQueueFound = true;
                 }
             }
-            if (!computeQueueFound || !graphicsQueueFound || !transferQueueFound) {
-                LOGE(__FUNCTION__ ,"Compute queue %d found, graphics queue %d found., transfer queue %d found ", computeQueueFound , graphicsQueueFound, transferQueueFound );
+            if (!computeQueueFound || !graphicsQueueFound /*|| !transferQueueFound*/) {
+                LOGE(m_TAG ,"Compute queue %d found, graphics queue %d found., transfer queue %d found ", computeQueueFound , graphicsQueueFound, transferQueueFound );
                 throw std::runtime_error("no suitable queue families");
             }
         }
@@ -127,12 +127,14 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
                 deviceQueueCreateInfos.push_back(deviceQueueCreateInfoGraphics);
             }
 
+            /*
             if(m_BufferQueueStruct.graphicsQueueFamilyIndex != m_BufferQueueStruct.transferQueueFamilyIndex)
             {
                 VkDeviceQueueCreateInfo deviceQueueCreateInfoTransfer = deviceQueueCreateInfo;
                 deviceQueueCreateInfoTransfer.queueFamilyIndex = m_BufferQueueStruct.transferQueueFamilyIndex;
                 deviceQueueCreateInfos.push_back(deviceQueueCreateInfoTransfer);
             }
+             */
 
             VkPhysicalDeviceFeatures features{};
             features.samplerAnisotropy = VK_TRUE;
@@ -189,8 +191,6 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
         setDebugLabel("compute_queue", VK_OBJECT_TYPE_QUEUE, reinterpret_cast<uint64_t>(getVkQueueCompute()));
     }*/
 
-    createSamplers();
-
 //    auto allShaders = ComputeShader::getAllShaderNames();
 //
 //    for (const auto& name : allShaders) {
@@ -203,6 +203,76 @@ GfxDevice::GfxDevice(const DeviceConfig &config) {
     //m_dependencyManager = std::make_unique<VulkanDependencyTracker>();
     //m_resourceManager = std::make_unique<VulkanResourceManager>(dev);
     //m_commandBufferManager = std::make_unique<CommandBufferManager>(dev);
+
+}
+void GfxDevice::init()
+{
+    LOGD(m_TAG,__FUNCTION__);
+    createSwapChain();
+    createRenderPass();
+    createFrameBuffers();
+    createDescriptorSetLayout();
+    createPushConstantRange();
+    createGraphicsPipeline();
+    createCommandPool();
+    createCommandBuffers();
+    createTextureSampler();
+    createUniformBuffers();
+    createDescriptorPool();
+    createDescriptorSets();
+    //createSynchronisation();
+}
+void GfxDevice::deInit()
+{
+    vkDestroyDevice(m_DeviceStruct.device, nullptr);
+    vkDestroyInstance(m_DeviceStruct.instance, nullptr);
+}
+
+void GfxDevice::createDescriptorPool()
+{
+    LOGD(m_TAG,__FUNCTION__);
+    // CREATE UNIFORM DESCRIPTOR POOL
+    // Type of descriptors + how many DESCRIPTORS, not Descriptor Sets (combined makes the pool size)
+    // ViewProjection Pool
+    VkDescriptorPoolSize vpPoolSize = {};
+    vpPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    vpPoolSize.descriptorCount = static_cast<uint32_t>(vpUniformBuffer.size());
+
+    // Model Pool (DYNAMIC)
+    /*VkDescriptorPoolSize modelPoolSize = {};
+    modelPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    modelPoolSize.descriptorCount = static_cast<uint32_t>(modelDUniformBuffer.size());*/
+
+    // List of pool sizes
+    std::vector<VkDescriptorPoolSize> descriptorPoolSizes = { vpPoolSize };
+
+    // Data to create Descriptor Pool
+    VkDescriptorPoolCreateInfo poolCreateInfo = {};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolCreateInfo.maxSets = static_cast<uint32_t>(m_SwapchainImages.size());					// Maximum number of Descriptor Sets that can be created from pool
+    poolCreateInfo.poolSizeCount = static_cast<uint32_t>(descriptorPoolSizes.size());		// Amount of Pool Sizes being passed
+    poolCreateInfo.pPoolSizes = descriptorPoolSizes.data();									// Pool Sizes to create pool with
+
+    // Create Descriptor Pool
+    VkResult result = vkCreateDescriptorPool(m_DeviceStruct.device, &poolCreateInfo, nullptr, &m_DescriptorPool);
+    if (result != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create a Descriptor Pool!");
+    }
+
+    // CREATE SAMPLER DESCRIPTOR POOL
+    // Texture sampler pool
+    VkDescriptorPoolSize samplerPoolSize = {};
+    samplerPoolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    samplerPoolSize.descriptorCount = MAX_OBJECTS;
+
+    VkDescriptorPoolCreateInfo samplerPoolCreateInfo = {};
+    samplerPoolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    samplerPoolCreateInfo.maxSets = MAX_OBJECTS;
+    samplerPoolCreateInfo.poolSizeCount = 1;
+    samplerPoolCreateInfo.pPoolSizes = &samplerPoolSize;
+
+    CHECK_VK(vkCreateDescriptorPool(m_DeviceStruct.device, &samplerPoolCreateInfo, nullptr, &m_SamplerDescriptorPool));
 }
 
 VkPhysicalDevice GfxDevice::getPhysicalDevice(VkInstance instance)
@@ -210,7 +280,7 @@ VkPhysicalDevice GfxDevice::getPhysicalDevice(VkInstance instance)
     uint32_t deviceCount = 0;
     CHECK_VK(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
     if (deviceCount == 0) {
-        LOGE(__FUNCTION__,"No physical devices found.");
+        LOGE(m_TAG,"No physical devices found.");
         return VK_NULL_HANDLE;
     }
     std::vector<VkPhysicalDevice> devices(deviceCount);
@@ -225,6 +295,7 @@ void GfxDevice::createSamplers() {
 }
 
 void GfxDevice::createSurface(ANativeWindow* window) {
+    LOGD(m_TAG,__FUNCTION__);
     VkAndroidSurfaceCreateInfoKHR create_info{};
     create_info.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     create_info.pNext = nullptr;
@@ -240,10 +311,11 @@ void GfxDevice::reCreateSwapchain() {
 }
 
 void GfxDevice::createSwapChain() {
+    LOGD(m_TAG,__FUNCTION__);
     VkSurfaceCapabilitiesKHR capabilities;
     CHECK_VK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_DeviceStruct.physicalDevice, m_Surface,
                                                        &capabilities));
-
+    m_DisplaySizeIdentity = capabilities.currentExtent;
     uint32_t formatCount = 0;
     std::vector<VkSurfaceFormatKHR> formats;
     vkGetPhysicalDeviceSurfaceFormatsKHR(m_DeviceStruct.physicalDevice, m_Surface, &formatCount,
@@ -253,7 +325,6 @@ void GfxDevice::createSwapChain() {
         vkGetPhysicalDeviceSurfaceFormatsKHR(m_DeviceStruct.physicalDevice, m_Surface, &formatCount,
                                              formats.data());
     }
-
     uint32_t presentModeCount;
     std::vector<VkPresentModeKHR> presentModes;
     vkGetPhysicalDeviceSurfacePresentModesKHR(m_DeviceStruct.physicalDevice, m_Surface,
@@ -276,7 +347,6 @@ void GfxDevice::createSwapChain() {
             };
 
     VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(formats);
-
     // Please check
     // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkPresentModeKHR.html
     // for a discourse on different present modes.
@@ -312,7 +382,6 @@ void GfxDevice::createSwapChain() {
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     CHECK_VK(vkCreateSwapchainKHR(m_DeviceStruct.device, &createInfo, nullptr, &m_SwapChain));
-
     vkGetSwapchainImagesKHR(m_DeviceStruct.device, m_SwapChain, &imageCount, nullptr);
     std::vector<VkImage> images(imageCount);
     vkGetSwapchainImagesKHR(m_DeviceStruct.device, m_SwapChain, &imageCount,
@@ -344,8 +413,10 @@ void GfxDevice::createSwapChain() {
 
     // Create Depth Buffer Image View
     m_DepthBufferImageView = createImageView(m_DepthBufferImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-
-
+}
+void GfxDevice::createFrameBuffers()
+{
+    LOGD(m_TAG,__FUNCTION__);
     m_SwapchainFramebuffers.resize(m_SwapchainImages.size());
 
     // Create a framebuffer for each swap chain image
@@ -367,11 +438,10 @@ void GfxDevice::createSwapChain() {
 
         CHECK_VK(vkCreateFramebuffer(m_DeviceStruct.device, &framebufferCreateInfo, nullptr, &m_SwapchainFramebuffers[i]));
     }
-
 }
-
 VkImageView GfxDevice::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
 {
+    LOGD(m_TAG,__FUNCTION__);
     VkImageViewCreateInfo viewCreateInfo = {};
     viewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewCreateInfo.image = image;											// Image to create view for
@@ -392,12 +462,12 @@ VkImageView GfxDevice::createImageView(VkImage image, VkFormat format, VkImageAs
     // Create image view and return it
     VkImageView imageView;
     CHECK_VK(vkCreateImageView(m_DeviceStruct.device, &viewCreateInfo, nullptr, &imageView));
-
     return imageView;
 }
 
 void GfxDevice::createRenderPass()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // ATTACHMENTS
     // Colour attachment of render pass
     VkAttachmentDescription colourAttachment = {};
@@ -505,12 +575,12 @@ VkFormat GfxDevice::chooseSupportedFormat(const std::vector<VkFormat>& formats, 
             return format;
         }
     }
-
     throw std::runtime_error("Failed to find a matching format!");
 }
 
 void GfxDevice::createDescriptorSetLayout()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // UNIFORM VALUES DESCRIPTOR SET LAYOUT
     // UboViewProjection Binding Info
     VkDescriptorSetLayoutBinding vpLayoutBinding = {};
@@ -537,11 +607,7 @@ void GfxDevice::createDescriptorSetLayout()
     layoutCreateInfo.pBindings = layoutBindings.data();								// Array of binding infos
 
     // Create Descriptor Set Layout
-    VkResult result = vkCreateDescriptorSetLayout(m_DeviceStruct.device, &layoutCreateInfo, nullptr, &m_DescriptorSetLayout);
-    if (result != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create a Descriptor Set Layout!");
-    }
+    CHECK_VK(vkCreateDescriptorSetLayout(m_DeviceStruct.device, &layoutCreateInfo, nullptr, &m_DescriptorSetLayout));
 
     // CREATE TEXTURE SAMPLER DESCRIPTOR SET LAYOUT
     // Texture binding info
@@ -564,6 +630,7 @@ void GfxDevice::createDescriptorSetLayout()
 
 void GfxDevice::createPushConstantRange()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // Define push constant values (no 'create' needed!)
     m_pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;	// Shader stage push constant will go to
     m_pushConstantRange.offset = 0;								// Offset into given data to pass to push constant
@@ -573,6 +640,7 @@ void GfxDevice::createPushConstantRange()
 
 void GfxDevice::createGraphicsPipeline()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // Read in SPIR-V code of shaders
     auto vertexShaderCode = readFile("Shaders/vert.spv");
     auto fragmentShaderCode = readFile("Shaders/frag.spv");
@@ -816,6 +884,7 @@ std::vector<char> GfxDevice::readFile(const std::string &filename)
 
 VkShaderModule GfxDevice::createShaderModule(const std::vector<char>& code)
 {
+    LOGD(m_TAG,__FUNCTION__);
     // Shader Module creation information
     VkShaderModuleCreateInfo shaderModuleCreateInfo = {};
     shaderModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -895,7 +964,7 @@ uint32_t GfxDevice::findMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_
 
 void GfxDevice::createCommandPool()
 {
-
+    LOGD(m_TAG,__FUNCTION__);
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -907,6 +976,7 @@ void GfxDevice::createCommandPool()
 
 void GfxDevice::createCommandBuffers()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // Resize command buffer count to have one for each framebuffer
     m_CommandBuffers.resize(m_SwapchainFramebuffers.size());
 
@@ -945,6 +1015,7 @@ void GfxDevice::createTextureSampler()
 
 void GfxDevice::createUniformBuffers()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // ViewProjection buffer size
     VkDeviceSize vpBufferSize = sizeof(UboViewProjection);
 
@@ -970,6 +1041,7 @@ void GfxDevice::createUniformBuffers()
 
 void GfxDevice::createDescriptorSets()
 {
+    LOGD(m_TAG,__FUNCTION__);
     // Resize Descriptor Set list so one for every buffer
     m_DescriptorSets.resize(m_SwapchainImages.size());
 
@@ -1089,6 +1161,7 @@ void GfxDevice::recordCommands(uint32_t currentImage)
     // Bind Pipeline to be used in render pass
     vkCmdBindPipeline(m_CommandBuffers[currentImage], VK_PIPELINE_BIND_POINT_GRAPHICS,m_GraphicsPipeline);
 
+    /* TODO
     for (size_t j = 0; j < meshList.size(); j++)
     {
         VkBuffer vertexBuffers[] = { meshList[j].getVertexBuffer() };					// Buffers to bind
@@ -1117,6 +1190,7 @@ void GfxDevice::recordCommands(uint32_t currentImage)
         // Execute pipeline
         vkCmdDrawIndexed(m_CommandBuffers[currentImage], meshList[j].getIndexCount(), 1, 0, 0, 0);
     }
+     */
     // End Render Pass
     vkCmdEndRenderPass(m_CommandBuffers[currentImage]);
 

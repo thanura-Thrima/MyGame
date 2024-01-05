@@ -1,5 +1,5 @@
 #include "Mesh.h"
-
+/*
 uint32_t findMemoryTypeIndex(VkPhysicalDevice physicalDevice, uint32_t allowedTypes, VkMemoryPropertyFlags properties)
 {
     // Get properties of physical device memory
@@ -121,23 +121,25 @@ void createBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize
     // Allocate memory to given vertex buffer
     vkBindBufferMemory(device, *buffer, *bufferMemory, 0);
 }
-
+*/
 
 Mesh::Mesh()
 {
 }
 
-Mesh::Mesh(VkPhysicalDevice newPhysicalDevice, VkDevice newDevice,
-           VkQueue transferQueue, VkCommandPool transferCommandPool,
+Mesh::Mesh(/*VkPhysicalDevice newPhysicalDevice, VkDevice newDevice,
+           VkQueue transferQueue, VkCommandPool transferCommandPool,*/
            std::vector<Vertex>* vertices, std::vector<uint32_t> * indices,
            int newTexId)
 {
     vertexCount = vertices->size();
     indexCount = indices->size();
+    /*
     physicalDevice = newPhysicalDevice;
     device = newDevice;
     createVertexBuffer(transferQueue, transferCommandPool, vertices);
     createIndexBuffer(transferQueue, transferCommandPool, indices);
+    */
 
     model.model = glm::mat4(1.0f);
     texId = newTexId;
@@ -162,35 +164,40 @@ int Mesh::getVertexCount()
 {
     return vertexCount;
 }
-
+/*
 VkBuffer Mesh::getVertexBuffer()
 {
     return vertexBuffer;
 }
+*/
 
 int Mesh::getIndexCount()
 {
     return indexCount;
 }
 
+/*
 VkBuffer Mesh::getIndexBuffer()
 {
     return indexBuffer;
 }
+*/
 
 void Mesh::destroyBuffers()
 {
+    /*
     vkDestroyBuffer(device, vertexBuffer, nullptr);
     vkFreeMemory(device, vertexBufferMemory, nullptr);
     vkDestroyBuffer(device, indexBuffer, nullptr);
     vkFreeMemory(device, indexBufferMemory, nullptr);
+     */
 }
 
 
 Mesh::~Mesh()
 {
 }
-
+/*
 void Mesh::createVertexBuffer(VkQueue transferQueue, VkCommandPool transferCommandPool, std::vector<Vertex>* vertices)
 {
     // Get size of buffer needed for vertices
@@ -252,3 +259,4 @@ void Mesh::createIndexBuffer(VkQueue transferQueue, VkCommandPool transferComman
     vkDestroyBuffer(device, stagingBuffer, nullptr);
     vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
+*/
